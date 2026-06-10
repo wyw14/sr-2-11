@@ -1,0 +1,21 @@
+[
+  {
+    "id": "c64427f9-0b80-43c3-97d7-456d9fc2a153",
+    "userId": "df0982cf-fd03-4271-9448-be469de12187",
+    "name": "编程搭档筛选",
+    "filters": {
+      "keyword": "编程",
+      "city": "",
+      "province": "",
+      "minRating": "",
+      "minExchangeCount": "",
+      "teachSkill": "",
+      "teachSkillCategory": "",
+      "learnSkill": "",
+      "learnSkillCategory": "",
+      "exchangeMode": "both",
+      "availableTime": []
+    },
+    "createdAt": "2026-06-10T19:00:45.812Z"
+  }
+]

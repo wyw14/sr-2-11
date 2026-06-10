@@ -32,7 +32,15 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/users/profile', data),
   getUsers: (params) => api.get('/users', { params }),
-  getUser: (id) => api.get(`/users/${id}`)
+  getUser: (id) => api.get(`/users/${id}`),
+  getCities: () => api.get('/cities')
+}
+
+export const filterAPI = {
+  getFilters: () => api.get('/filters'),
+  saveFilter: (data) => api.post('/filters', data),
+  updateFilter: (id, data) => api.put(`/filters/${id}`, data),
+  deleteFilter: (id) => api.delete(`/filters/${id}`)
 }
 
 export const skillAPI = {

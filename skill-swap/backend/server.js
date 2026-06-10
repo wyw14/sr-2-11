@@ -490,7 +490,21 @@ app.put('/api/skill-tree', authMiddleware, (req, res) => {
 
 app.get('/api/users', authMiddleware, (req, res) => {
   const users = readJson('users.json');
-  const { minRating, city, skill } = req.query;
+  const skills = readJson('skills.json');
+  const {
+    minRating,
+    city,
+    province,
+    teachSkill,
+    learnSkill,
+    teachSkillCategory,
+    learnSkillCategory,
+    exchangeMode,
+    availableTime,
+    keyword,
+    minExchangeCount
+  } = req.query;
+
   let filtered = users.map(u => {
     const { password: _, ...userWithoutPassword } = u;
     return userWithoutPassword;
@@ -499,20 +513,176 @@ app.get('/api/users', authMiddleware, (req, res) => {
   if (minRating) {
     filtered = filtered.filter(u => u.rating >= parseFloat(minRating));
   }
-  if (city) {
-    filtered = filtered.filter(u =>
-      u.preferences?.location?.city?.includes(city)
-    );
-  }
-  if (skill) {
-    const skills = readJson('skills.json');
-    const userIdsWithSkill = skills
-      .filter(s => s.name.includes(skill))
-      .map(s => s.userId);
-    filtered = filtered.filter(u => userIdsWithSkill.includes(u.id));
+
+  if (minExchangeCount) {
+    filtered = filtered.filter(u => (u.exchangeCount || 0) >= parseInt(minExchangeCount));
   }
 
+  if (city) {
+    filtered = filtered.filter(u =>
+      u.preferences?.location?.city &&
+      u.preferences.location.city.includes(city)
+    );
+  }
+
+  if (province) {
+    filtered = filtered.filter(u =>
+      u.preferences?.location?.province &&
+      u.preferences.location.province.includes(province)
+    );
+  }
+
+  if (exchangeMode && exchangeMode !== 'both') {
+    filtered = filtered.filter(u => {
+      const pref = u.preferences?.onlinePreference;
+      return pref === 'both' || pref === exchangeMode;
+    });
+  }
+
+  if (availableTime) {
+    const timeArr = Array.isArray(availableTime) ? availableTime : availableTime.split(',');
+    filtered = filtered.filter(u => {
+      const userTimes = u.preferences?.time || [];
+      return timeArr.some(t => userTimes.includes(t));
+    });
+  }
+
+  const applySkillFilter = (type, skillName, skillCategory) => {
+    let userIds = null;
+
+    if (skillName) {
+      const matched = skills.filter(s =>
+        s.type === type && s.name.toLowerCase().includes(skillName.toLowerCase())
+      );
+      userIds = matched.map(s => s.userId);
+    }
+
+    if (skillCategory) {
+      const matched = skills.filter(s =>
+        s.type === type && s.category === skillCategory
+      );
+      const categoryUserIds = matched.map(s => s.userId);
+      userIds = userIds ? userIds.filter(id => categoryUserIds.includes(id)) : categoryUserIds;
+    }
+
+    if (userIds) {
+      filtered = filtered.filter(u => userIds.includes(u.id));
+    }
+  };
+
+  applySkillFilter('teach', teachSkill, teachSkillCategory);
+  applySkillFilter('learn', learnSkill, learnSkillCategory);
+
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    const skillUserIds = skills
+      .filter(s => s.name.toLowerCase().includes(kw))
+      .map(s => s.userId);
+    filtered = filtered.filter(u =>
+      u.username.toLowerCase().includes(kw) ||
+      (u.bio && u.bio.toLowerCase().includes(kw)) ||
+      skillUserIds.includes(u.id)
+    );
+  }
+
+  filtered = filtered.map(u => {
+    const userSkills = skills.filter(s => s.userId === u.id);
+    return {
+      ...u,
+      teachSkills: userSkills.filter(s => s.type === 'teach'),
+      learnSkills: userSkills.filter(s => s.type === 'learn')
+    };
+  });
+
   res.json(filtered);
+});
+
+app.get('/api/cities', authMiddleware, (req, res) => {
+  const users = readJson('users.json');
+  const cities = new Set();
+  const provinces = new Set();
+  users.forEach(u => {
+    if (u.preferences?.location?.city) {
+      cities.add(u.preferences.location.city);
+    }
+    if (u.preferences?.location?.province) {
+      provinces.add(u.preferences.location.province);
+    }
+  });
+  res.json({
+    cities: Array.from(cities).sort(),
+    provinces: Array.from(provinces).sort()
+  });
+});
+
+app.get('/api/filters', authMiddleware, (req, res) => {
+  const filters = readJson('savedFilters.json');
+  const userFilters = filters.filter(f => f.userId === req.user.id);
+  res.json(userFilters);
+});
+
+app.post('/api/filters', authMiddleware, (req, res) => {
+  const { name, filters } = req.body;
+
+  if (!name || !filters) {
+    return res.status(400).json({ error: '请填写筛选名称和筛选条件' });
+  }
+  if (name.length > 50) {
+    return res.status(400).json({ error: '筛选名称长度不能超过50个字符' });
+  }
+
+  const allFilters = readJson('savedFilters.json');
+  const existing = allFilters.find(f => f.userId === req.user.id && f.name === name);
+  if (existing) {
+    return res.status(400).json({ error: '该筛选名称已存在' });
+  }
+
+  const newFilter = {
+    id: uuidv4(),
+    userId: req.user.id,
+    name,
+    filters,
+    createdAt: new Date().toISOString()
+  };
+
+  allFilters.push(newFilter);
+  writeJson('savedFilters.json', allFilters);
+  res.json(newFilter);
+});
+
+app.put('/api/filters/:id', authMiddleware, (req, res) => {
+  const { name, filters } = req.body;
+  const allFilters = readJson('savedFilters.json');
+  const index = allFilters.findIndex(f => f.id === req.params.id && f.userId === req.user.id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: '筛选条件不存在' });
+  }
+
+  if (name) {
+    const existing = allFilters.find(f =>
+      f.userId === req.user.id && f.name === name && f.id !== req.params.id
+    );
+    if (existing) {
+      return res.status(400).json({ error: '该筛选名称已存在' });
+    }
+    allFilters[index].name = name;
+  }
+
+  if (filters) {
+    allFilters[index].filters = filters;
+  }
+
+  allFilters[index].updatedAt = new Date().toISOString();
+  writeJson('savedFilters.json', allFilters);
+  res.json(allFilters[index]);
+});
+
+app.delete('/api/filters/:id', authMiddleware, (req, res) => {
+  const allFilters = readJson('savedFilters.json');
+  const filtered = allFilters.filter(f => !(f.id === req.params.id && f.userId === req.user.id));
+  writeJson('savedFilters.json', filtered);
+  res.json({ success: true });
 });
 
 app.listen(PORT, () => {

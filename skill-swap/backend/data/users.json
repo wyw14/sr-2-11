@@ -42,5 +42,27 @@
     },
     "skillTree": [],
     "createdAt": "2026-06-04T07:32:50.596Z"
+  },
+  {
+    "id": "df0982cf-fd03-4271-9448-be469de12187",
+    "username": "测试用户A",
+    "email": "testa@example.com",
+    "password": "$2a$10$6Ve2Mdhrz2XYhM1AVC3I1uxSw3zoYjpyC2DWvoCcnj.R737gGZLtq",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=测试用户A",
+    "bio": "",
+    "rating": 5,
+    "reviewCount": 0,
+    "exchangeCount": 0,
+    "skillPoints": 0,
+    "preferences": {
+      "location": {
+        "city": "",
+        "province": ""
+      },
+      "time": [],
+      "onlinePreference": "both"
+    },
+    "skillTree": [],
+    "createdAt": "2026-06-10T18:56:23.501Z"
   }
 ]
