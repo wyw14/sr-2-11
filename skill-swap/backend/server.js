@@ -505,10 +505,12 @@ app.get('/api/users', authMiddleware, (req, res) => {
     minExchangeCount
   } = req.query;
 
-  let filtered = users.map(u => {
-    const { password: _, ...userWithoutPassword } = u;
-    return userWithoutPassword;
-  });
+  let filtered = users
+    .filter(u => u.id !== req.user.id)
+    .map(u => {
+      const { password: _, ...userWithoutPassword } = u;
+      return userWithoutPassword;
+    });
 
   if (minRating) {
     filtered = filtered.filter(u => u.rating >= parseFloat(minRating));

@@ -291,7 +291,7 @@
       </div>
       <el-empty v-else description="没有找到符合条件的用户，试试调整筛选条件？">
         <template #action>
-          <el-button type="primary" @click="resetFilters; loadUsers()">清除筛选</el-button>
+          <el-button type="primary" @click="resetFilters()">清除筛选</el-button>
         </template>
       </el-empty>
     </div>
@@ -483,7 +483,7 @@ function toggleAdvancedFilter() {
   showAdvancedFilter.value = !showAdvancedFilter.value
 }
 
-function resetFilters() {
+async function resetFilters() {
   filters.keyword = ''
   filters.city = ''
   filters.province = ''
@@ -495,9 +495,10 @@ function resetFilters() {
   filters.learnSkillCategory = ''
   filters.exchangeMode = 'both'
   filters.availableTime = []
+  await loadUsers()
 }
 
-function removeFilter(key) {
+async function removeFilter(key) {
   switch (key) {
     case 'keyword': filters.keyword = ''; break
     case 'city': filters.city = ''; break
@@ -511,6 +512,7 @@ function removeFilter(key) {
     case 'exchangeMode': filters.exchangeMode = 'both'; break
     case 'availableTime': filters.availableTime = []; break
   }
+  await loadUsers()
 }
 
 function openSaveDialog() {
